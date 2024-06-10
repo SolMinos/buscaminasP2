@@ -1,0 +1,116 @@
+void baja_jugador() {
+	// Implementar la función de baja de jugador
+}
+
+void modificar_jugador() {
+	// Implementar la función de modificación de jugador
+}
+
+void listado_jugadores() {
+	// Implementar la función de listado de jugadores
+}
+
+void listado_partidas() {
+	// Implementar la función de listado de partidas
+}
+
+void listado_partidas_jugador() {
+	// Implementar la función de listado de partidas por jugador
+}
+
+void listado_partidas_fecha() {
+	// Implementar la función de listado de partidas por fecha
+}
+
+
+typedef struct {
+		int CI;
+		char fecha_nacimiento[11]; // Formato: DD-MM-AAAA
+		char nombre[50];
+		char apellido[50];
+		char alias[MAX_ALIAS_LENGTH];
+		int activo; // 1 si está activo, 0 si está inactivo
+		int partidas_ganadas;
+	} Jugador;
+	
+	Jugador jugadores[MAX_JUGADORES];
+	int num_jugadores = 0;
+	
+	// Prototipos de funciones para la administración de jugadores
+	void gestionar_usuario();
+	void alta_jugador();
+	void baja_jugador();
+	void modificar_jugador();
+	void listado_jugadores();
+	void listado_partidas();
+	void listado_partidas_jugador();
+	void listado_partidas_fecha();
+	
+	// Otras funciones del juego (mantenidas como estaban)
+		srand(time(NULL));
+		inicializar_tablero();
+		printf("¡Bienvenido al Buscaminas!\n");
+		printf("Para jugar, elige una opción seguida de una fila (A-H) y una columna (A-H).\n");
+		printf("Las opciones son: (E)xplorar, (M)arcar y (B)uscar.\n");
+		mostrar_tablero();
+		
+		int opcion;
+		do {
+			printf("\nMenú:\n");
+			printf("1) Gestionar usuario\n");
+			printf("2) Consultas\n");
+			printf("3) Jugar\n");
+			printf("4) Salir\n");
+			printf("Seleccione una opción: ");
+			scanf("%d", &opcion);
+			
+			switch (opcion) {
+			case 1:
+				gestionar_usuario();
+				break;
+			case 2:
+				// Implementar consultas
+				break;
+			case 3:
+				// Implementar juego
+				break;
+			case 4:
+				printf("Saliendo del juego...\n");
+				break;
+			default:
+				printf("Opción inválida. Intente de nuevo.\n");
+			}
+		} while (opcion != 4);
+		
+		return 0;
+	}
+	
+	void gestionar_usuario() {
+		int opcion;
+		do {
+			printf("\nGestionar usuario:\n");
+			printf("1) Alta de jugador\n");
+			printf("2) Baja de jugador\n");
+			printf("3) Modificación de jugador\n");
+			printf("4) Volver al menú principal\n");
+			printf("Seleccione una opción: ");
+			scanf("%d", &opcion);
+			
+			switch (opcion) {
+			case 1:
+				alta_jugador();
+				break;
+			case 2:
+				baja_jugador();
+				break;
+			case 3:
+				modificar_jugador();
+				break;
+			case 4:
+				printf("Volviendo al menú principal...\n");
+				break;
+			default:
+				printf("Opción inválida. Intente de nuevo.\n");
+			}
+		} while (opcion != 4);
+	}
