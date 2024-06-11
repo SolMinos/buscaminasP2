@@ -1,116 +1,477 @@
-void baja_jugador() {
-	// Implementar la función de baja de jugador
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#define FILAS 8
+#define COLUMNAS 8
+#define MINAS 16
+#define CASILLAS_SIN_MINAS 48
+#define MAX_MARCADAS 16
+
+typedef struct {
+	char ci[9];
+	char fecha_nacimiento[11];
+	char nombre[50];
+	char apellido[50];
+	char alias[50];
+	int activo;
+	int partidas_ganadas;
+} Jugador;
+
+typedef struct {
+	char fecha[20];
+	char alias[50];
+	char resultado[20];
+} Partida;
+
+Jugador jugadores[100];
+int num_jugadores = 0;
+Partida partidas[100];
+int num_partidas = 0;
+char tablero[FILAS][COLUMNAS];
+char tablero_oculto[FILAS][COLUMNAS];
+int marcadas = 0;
+int exploradas = 0;
+int primera_jugada = 1;
+int game_over = 0;
+
+int validar_ci(char ci[]) {
+	return strlen(ci) == 8 && strspn(ci, "0123456789") == 8;
+}
+
+int validar_fecha(char fecha[]) {
+
+	
+	time_t tiempo = time(NULL);
+	struct tm * local;
+	local = localtime(&tiempo);
+	
+	int dia = local -> tm_mday;
+	int mes = local -> tm_mon+1;
+	int anio = local -> tm_year+1900;
+	
+	printf("\nFecha %d/%d/%d", dia, mes, anio);
+		
+}
+
+int alias_unico(char alias[]) {
+	for (int i = 0; i < num_jugadores; i++) {
+		if (strcmp(jugadores[i].alias, alias) == 0) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+void alta_jugador() {
+	Jugador nuevo;
+	printf("\nIngrese CI (8 dígitos): ");
+	scanf("%8s", nuevo.ci);
+	while (!validar_ci(nuevo.ci)) {
+		printf("\nCI inválido. Ingrese CI (8 dígitos): ");
+		scanf("%8s", nuevo.ci);
+	}
+	printf("\nIngrese fecha de nacimiento (YYYY-MM-DD): ");
+	scanf("%10s", nuevo.fecha_nacimiento);
+	while (!validar_fecha(nuevo.fecha_nacimiento)) {
+		printf("\nFecha inválida. Ingrese fecha de nacimiento (YYYY-MM-DD): ");
+		scanf("%10s", nuevo.fecha_nacimiento);
+	}
+	printf("\nIngrese nombre: ");
+	scanf("%49s", nuevo.nombre);
+	printf("\nIngrese apellido: ");
+	scanf("%49s", nuevo.apellido);
+	printf("\nIngrese alias: ");
+	scanf("%49s", nuevo.alias);
+	while (!alias_unico(nuevo.alias)) {
+		printf("\nAlias ya en uso. Ingrese otro alias: ");
+		scanf("%49s", nuevo.alias);
+	}
+	printf("\n¿Está activo? (s/n): ");
+	char activo;
+	scanf(" %c", &activo);
+	nuevo.activo = (activo == 's');
+	nuevo.partidas_ganadas = 0;
+	jugadores[num_jugadores++] = nuevo;
+	printf("\nJugador %s registrado exitosamente.\n", nuevo.alias);
 }
 
 void modificar_jugador() {
-	// Implementar la función de modificación de jugador
+	char alias[50];
+	printf("\nIngrese el alias del jugador a modificar: ");
+	scanf("%49s", alias);
+	for (int i = 0; i < num_jugadores; i++) {
+		if (strcmp(jugadores[i].alias, alias) == 0) {
+			Jugador *jugador = &jugadores[i];
+			printf("\nModificando datos de %s\n", alias);
+			printf("\nCI (%s): ", jugador->ci);
+			scanf("%8s", jugador->ci);
+			printf("\nFecha de nacimiento (%s): ", jugador->fecha_nacimiento);
+			scanf("%10s", jugador->fecha_nacimiento);
+			printf("\nNombre (%s): ", jugador->nombre);
+			scanf("%49s", jugador->nombre);
+			printf("\nApellido (%s): ", jugador->apellido);
+			scanf("%49s", jugador->apellido);
+			printf("\n¿Está activo? (s/n) (%c): ", jugador->activo ? 's' : 'n');
+			char activo;
+			scanf(" %c", &activo);
+			jugador->activo = (activo == 's');
+			printf("\nDatos de %s modificados exitosamente.\n", alias);
+			return;
+		}
+	}
+	printf("\nNo se encontró ningún jugador con el alias %s.\n", alias);
 }
 
-void listado_jugadores() {
-	// Implementar la función de listado de jugadores
+void listar_jugadores() {
+	printf("\nListado de jugadores activos:\n");
+	for (int i = 0; i < num_jugadores; i++) {
+		if (jugadores[i].activo) {
+			printf("\nAlias: %s, CI: %s, Nombre: %s %s, Partidas Ganadas: %d\n",
+				   jugadores[i].alias, jugadores[i].ci, jugadores[i].nombre, jugadores[i].apellido,
+				   jugadores[i].partidas_ganadas);
+		}
+	}
 }
 
-void listado_partidas() {
-	// Implementar la función de listado de partidas
+void listar_partidas() {
+	printf("\nListado de todas las partidas:\n");
+	for (int i = 0; i < num_partidas; i++) {
+		printf("\nFecha: %s, Alias: %s, Resultado: %s\n", partidas[i].fecha, partidas[i].alias,
+			   partidas[i].resultado);
+	}
 }
 
-void listado_partidas_jugador() {
-	// Implementar la función de listado de partidas por jugador
+void inicializar_tablero() {
+	for (int i = 0; i < FILAS; i++) {
+		for (int j = 0; j < COLUMNAS; j++) {
+			tablero[i][j] = '?';
+			tablero_oculto[i][j] = '?';
+		}
+	}
 }
 
-void listado_partidas_fecha() {
-	// Implementar la función de listado de partidas por fecha
+void colocar_minas(int primera_fila, int primera_columna) {
+	int minas_colocadas = 0;
+	while (minas_colocadas < MINAS) {
+		int fila = rand() % FILAS;
+		int columna = rand() % COLUMNAS;
+		if ((fila != primera_fila || columna != primera_columna) && tablero_oculto[fila][columna]
+			!= 'B') {
+			tablero_oculto[fila][columna] = 'B';
+			minas_colocadas++;
+		}
+	}
 }
 
+void mostrar_tablero() {
+	printf("\n  A B C D E F G H\n");
+	for (int i = 0; i < FILAS; i++) {
+		printf("%c ", 'A' + i);
+		for (int j = 0; j < COLUMNAS; j++) {
+			printf("%c ", tablero[i][j]);
+		}
+		printf("\n");
+	}
+}
 
-typedef struct {
-		int CI;
-		char fecha_nacimiento[11]; // Formato: DD-MM-AAAA
-		char nombre[50];
-		char apellido[50];
-		char alias[MAX_ALIAS_LENGTH];
-		int activo; // 1 si está activo, 0 si está inactivo
-		int partidas_ganadas;
-	} Jugador;
-	
-	Jugador jugadores[MAX_JUGADORES];
-	int num_jugadores = 0;
-	
-	// Prototipos de funciones para la administración de jugadores
-	void gestionar_usuario();
-	void alta_jugador();
-	void baja_jugador();
-	void modificar_jugador();
-	void listado_jugadores();
-	void listado_partidas();
-	void listado_partidas_jugador();
-	void listado_partidas_fecha();
-	
-	// Otras funciones del juego (mantenidas como estaban)
-		srand(time(NULL));
-		inicializar_tablero();
-		printf("¡Bienvenido al Buscaminas!\n");
-		printf("Para jugar, elige una opción seguida de una fila (A-H) y una columna (A-H).\n");
-		printf("Las opciones son: (E)xplorar, (M)arcar y (B)uscar.\n");
-		mostrar_tablero();
-		
-		int opcion;
-		do {
-			printf("\nMenú:\n");
-			printf("1) Gestionar usuario\n");
-			printf("2) Consultas\n");
-			printf("3) Jugar\n");
-			printf("4) Salir\n");
-			printf("Seleccione una opción: ");
-			scanf("%d", &opcion);
-			
-			switch (opcion) {
-			case 1:
-				gestionar_usuario();
-				break;
-			case 2:
-				// Implementar consultas
-				break;
-			case 3:
-				// Implementar juego
-				break;
-			case 4:
-				printf("Saliendo del juego...\n");
-				break;
-			default:
-				printf("Opción inválida. Intente de nuevo.\n");
+void revelar_todas_las_bombas() {
+	for (int i = 0; i < FILAS; i++) {
+		for (int j = 0; j < COLUMNAS; j++) {
+			if (tablero_oculto[i][j] == 'B') {
+				tablero[i][j] = 'B';
 			}
-		} while (opcion != 4);
-		
+		}
+	}
+}
+
+void explorar(int fila, int columna) {
+	if (fila < 0 || fila >= FILAS || columna < 0 || columna >= COLUMNAS) {
+		printf("\nFormato de jugada erróneo\n");
+		return;
+	}
+	if (tablero[fila][columna] != '?') {
+		printf("\nFormato de jugada erróneo\n");
+		return;
+	}
+	if (primera_jugada) {
+		colocar_minas(fila, columna);
+		primera_jugada = 0;
+	}
+	if (tablero_oculto[fila][columna] == 'B') {
+		tablero[fila][columna] = 'B';
+		revelar_todas_las_bombas();
+		game_over = 1;
+		return;
+	}
+	int minas_adyacentes = 0;
+	for (int i = fila - 1; i <= fila + 1; i++) {
+		for (int j = columna - 1; j <= columna + 1; j++) {
+			if (i >= 0 && i < FILAS && j >= 0 && j < COLUMNAS && tablero_oculto[i][j] == 'B') {
+				minas_adyacentes++;
+			}
+		}
+	}
+	tablero[fila][columna] = minas_adyacentes + '0';
+	exploradas++;
+	if (minas_adyacentes == 0) {
+		for (int i = fila - 1; i <= fila + 1; i++) {
+			for (int j = columna - 1; j <= columna + 1; j++) {
+				if (!(i == fila && j == columna)) {
+					if (i >= 0 && i < FILAS && j >= 0 && j < COLUMNAS && tablero[i][j] == '?') {
+						explorar(i, j);
+					}
+				}
+			}
+		}
+	}
+}
+
+void marcar(int fila, int columna) {
+	if (fila < 0 || fila >= FILAS || columna < 0 || columna >= COLUMNAS) {
+		printf("\nFormato de jugada erróneo\n");
+		return;
+	}
+	if (tablero[fila][columna] == '?' || tablero[fila][columna] == 'X') {
+		tablero[fila][columna] = (tablero[fila][columna] == '?') ? 'X' : '?';
+		marcadas += (tablero[fila][columna] == 'X') ? 1 : -1;
+	} else {
+		printf("\nNo se puede marcar esta casilla.\n");
+	}
+}
+
+int es_casilla_explorada(int fila, int columna) {
+	if (fila < 0 || fila >= FILAS || columna < 0 || columna >= COLUMNAS) {
 		return 0;
 	}
-	
-	void gestionar_usuario() {
-		int opcion;
-		do {
-			printf("\nGestionar usuario:\n");
-			printf("1) Alta de jugador\n");
-			printf("2) Baja de jugador\n");
-			printf("3) Modificación de jugador\n");
-			printf("4) Volver al menú principal\n");
-			printf("Seleccione una opción: ");
-			scanf("%d", &opcion);
-			
-			switch (opcion) {
-			case 1:
-				alta_jugador();
-				break;
-			case 2:
-				baja_jugador();
-				break;
-			case 3:
-				modificar_jugador();
-				break;
-			case 4:
-				printf("Volviendo al menú principal...\n");
-				break;
-			default:
-				printf("Opción inválida. Intente de nuevo.\n");
+	return tablero[fila][columna] != '?' && tablero[fila][columna] != 'X';
+}
+
+int es_casilla_adyacente_explorada(int fila, int columna) {
+	for (int i = fila - 1; i <= fila + 1; i++) {
+		for (int j = columna - 1; j <= columna + 1; j++) {
+			if (es_casilla_explorada(i, j)) {
+				return 1;
 			}
-		} while (opcion != 4);
+		}
 	}
+	return 0;
+}
+
+void buscar(int fila, int columna) {
+	if (fila < 0 || fila >= FILAS || columna < 0 || columna >= COLUMNAS) {
+		printf("\nFormato de jugada erróneo\n");
+		return;
+	}
+	if (tablero[fila][columna] == '?' || tablero[fila][columna] == 'X') {
+		printf("\nJugada inválida: Debes buscar desde una casilla explorada\n");
+		return;
+	}
+	int minas_marcadas_adyacentes = 0;
+	for (int i = fila - 1; i <= fila + 1; i++) {
+		for (int j = columna - 1; j <= columna + 1; j++) {
+			if (i >= 0 && i < FILAS && j >= 0 && j < COLUMNAS && tablero[i][j] == 'X') {
+				minas_marcadas_adyacentes++;
+			}
+		}
+	}
+	if (tablero[fila][columna] - '0' != minas_marcadas_adyacentes) {
+		printf("\nJugada inválida: La cantidad de minas marcadas adyacentes no coincide\n");
+		return;
+	}
+	int revelado_ceros[FILAS][COLUMNAS] = {0};
+	for (int i = fila - 1; i <= fila + 1; i++) {
+		for (int j = columna - 1; j <= columna + 1; j++) {
+			if (i >= 0 && i < FILAS && j >= 0 && j < COLUMNAS && tablero[i][j] == '?') {
+				if (tablero_oculto[i][j] == 'B') {
+					revelar_todas_las_bombas();
+					game_over = 1;
+					return;
+				} else {
+					int minas_adyacentes = 0;
+					for (int x = i - 1; x <= i + 1; x++) {
+						for (int y = j - 1; y <= y + 1; y++) {
+							if (x >= 0 && x < FILAS && y >= 0 && y < COLUMNAS &&
+								tablero_oculto[x][y] == 'B') {
+								minas_adyacentes++;
+							}
+						}
+					}
+					tablero[i][j] = minas_adyacentes + '0';
+					exploradas++;
+					if (minas_adyacentes == 0) {
+						revelado_ceros[i][j] = 1;
+					}
+				}
+			}
+		}
+	}
+	for (int i = 0; i < FILAS; i++) {
+		for (int j = 0; j < COLUMNAS; j++) {
+			if (revelado_ceros[i][j]) {
+				for (int x = i - 1; x <= i + 1; x++) {
+					for (int y = j - 1; y <= j + 1; y++) {
+						if (x >= 0 && x < FILAS && y >= 0 && y < COLUMNAS && tablero[x][y] == '?')
+						{
+							if (tablero_oculto[x][y] == 'B') {
+								revelar_todas_las_bombas();
+								game_over = 1;
+								return;
+							} else {
+								int minas_adyacentes = 0;
+								for (int k = x - 1; k <= x + 1; k++) {
+									for (int l = y - 1; l <= y + 1; l++) {
+										if (k >= 0 && k < FILAS && l >= 0 && l < COLUMNAS &&
+											tablero_oculto[k][l] == 'B') {
+											minas_adyacentes++;
+										}
+									}
+								}
+								tablero[x][y] = minas_adyacentes + '0';
+								exploradas++;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+void limpiar_buffer() {
+	while (getchar() != '\n') {}
+}
+
+void jugar() {
+	char alias[50];
+	printf("\nIngrese su alias: ");
+	scanf("%49s", alias);
+	int encontrado = 0;
+	for (int i = 0; i < num_jugadores; i++) {
+		if (strcmp(jugadores[i].alias, alias) == 0) {
+			encontrado = 1;
+			break;
+		}
+	}
+	if (!encontrado) {
+		printf("\nAlias no encontrado. Juego cancelado.\n");
+		return;
+	}
+	srand(time(NULL));
+	inicializar_tablero();
+	printf("\n¡Bienvenido al Buscaminas!\n");
+	printf("Para jugar, elige una opción seguida de una fila (A-H) y una columna (A-H).\n");
+	printf("Las opciones son: (E)xplorar, (M)arcar y (B)uscar.\n");
+	mostrar_tablero();
+	while (exploradas < CASILLAS_SIN_MINAS && !game_over) {
+		char opcion;
+		char fila;
+		char columna;
+		printf("\nElige una opción: ");
+		scanf(" %c", &opcion);
+		scanf(" %c", &fila);
+		scanf(" %c", &columna);
+		limpiar_buffer();
+		fila -= 'A';
+		columna -= 'A';
+		switch (opcion) {
+		case 'E':
+			explorar(fila, columna);
+			break;
+		case 'M':
+			marcar(fila, columna);
+			break;
+		case 'B':
+			buscar(fila, columna);
+			break;
+		default:
+			printf("\nOpción inválida\n");
+		}
+		mostrar_tablero();
+	}
+	if (exploradas == CASILLAS_SIN_MINAS) {
+		printf("\n¡Pfff... fue pura suerte, la próxima no será tan fácil!\n");
+	} else if (game_over) {
+		printf("\n¡¡¡¡ PERDISTE !!!! Suerte la próxima, se nota que la necesitas.\n");
+	}
+	
+	Partida nueva_partida;
+	
+	
+	time_t tiempo = time(NULL);
+	struct tm * local;
+	local = localtime(&tiempo);
+	
+	int dia = local -> tm_mday;
+	int mes = local -> tm_mon+1;
+	int anio = local -> tm_year+1900;
+	
+	printf("\nFecha %d/%d/%d", dia, mes, anio);
+	
+	
+	strcpy(nueva_partida.alias, alias);
+	strcpy(nueva_partida.resultado, exploradas == CASILLAS_SIN_MINAS ? "Ganó" : "Perdió");
+	partidas[num_partidas++] = nueva_partida;
+	for (int i = 0; i < num_jugadores; i++) {
+		if (strcmp(jugadores[i].alias, alias) == 0) {
+			if (exploradas == CASILLAS_SIN_MINAS) {
+				jugadores[i].partidas_ganadas++;
+			}
+			break;
+		}
+	}
+}
+
+int main() {
+	int opcion;
+	do {
+		printf("\nMenú principal:\n");
+		printf("\n1. Gestionar usuario\n");
+		printf("2. Consultas\n");
+		printf("3. Jugar\n");
+		printf("4. Salir\n");
+		printf("\nSeleccione una opción: ");
+		scanf("%d", &opcion);
+		limpiar_buffer();
+		switch (opcion) {
+		case 1:
+			printf("\n1. Alta de jugador\n");
+			printf("2. Modificación de jugador\n");
+			int sub_opcion;
+			printf("\nSeleccione una opción: ");
+			scanf("%d", &sub_opcion);
+			limpiar_buffer();
+			if (sub_opcion == 1) {
+				alta_jugador();
+			} else if (sub_opcion == 2) {
+				modificar_jugador();
+			} else {
+				printf("\nOpción inválida\n");
+			}
+			break;
+		case 2:
+			printf("\n1. Listado de jugadores\n");
+			printf("2. Listado de todas las partidas\n");
+			printf("\nSeleccione una opción: ");
+			scanf("%d", &sub_opcion);
+			limpiar_buffer();
+			if (sub_opcion == 1) {
+				listar_jugadores();
+			} else if (sub_opcion == 2) {
+				listar_partidas();
+			} else {
+				printf("\nOpción inválida\n");
+			}
+			break;
+		case 3:
+			jugar();
+			break;
+		case 4:
+			printf("\nSaliendo del programa.\n");
+			break;
+		default:
+			printf("\nOpción inválida\n");
+		}
+	} while (opcion != 4);
+	return 0;
+}
